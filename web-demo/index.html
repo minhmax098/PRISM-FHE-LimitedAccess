@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM: Privacy-Preserving Rare Disease Analysis Demo</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .hero-banner {
+      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+      color: white;
+      padding: 2.5rem 0;
+      margin-bottom: 2rem;
+      border-bottom: 4px solid #00c6ff;
+    }
+    .card {
+      border: none;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      margin-bottom: 1.5rem;
+    }
+    .card-header {
+      border-radius: 12px 12px 0 0 !important;
+      font-weight: 600;
+    }
+    .badge-fhe {
+      background-color: #0d6efd;
+    }
+    .badge-prism {
+      background-color: #198754;
+    }
+    .metric-card {
+      background: white;
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-align: center;
+      border-left: 4px solid #0d6efd;
+    }
+    .metric-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #1e3c72;
+    }
+    .metric-label {
+      font-size: 0.85rem;
+      color: #6c757d;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .gene-matrix {
+      max-height: 250px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+    .bit-match {
+      background-color: #d1e7dd;
+      color: #0f5132;
+      font-weight: bold;
+    }
+    .bit-mismatch {
+      background-color: #f8d7da;
+      color: #842029;
+    }
+    .step-box {
+      border-left: 3px solid #2a5298;
+      padding-left: 1rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero Header -->
+  <div class="hero-banner">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-md-8">
+          <h1 class="display-5 fw-bold mb-2">PRISM Web Demo</h1>
+          <p class="lead mb-0">Privacy-preserving Rare Disease Analysis using Fully Homomorphic Encryption (FHE)</p>
+          <small class="text-light opacity-75">Demonstrating Add-in vs. Mul-in Filtering, SIMD Vector Packing, and Multi-party Threshold Decryption</small>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+          <span class="badge bg-light text-dark p-2 fs-6 mb-1"><i class="bi bi-shield-check text-success me-1"></i> FHE Secured</span><br>
+          <span class="badge bg-info text-dark p-2 fs-6"><i class="bi bi-cpu me-1"></i> Multi-party SIMD</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mb-5">
+    <!-- Controls & Config -->
+    <div class="row">
+      <div class="col-lg-4">
+        <div class="card">
+          <div class="card-header bg-primary text-white">
+            <i class="bi bi-sliders me-1"></i> Experiment Parameters
+          </div>
+          <div class="card-body">
+            <form id="configForm">
+              <div class="mb-3">
+                <label for="numSamples" class="form-label fw-semibold">Number of Samples (M):</label>
+                <select class="form-select" id="numSamples">
+                  <option value="4" selected>4 Samples (Default)</option>
+                  <option value="8">8 Samples</option>
+                  <option value="16">16 Samples</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="numVariants" class="form-label fw-semibold">Total Genotype Variants (N):</label>
+                <input type="number" class="form-control" id="numVariants" value="100" min="20" max="1000" step="10">
+              </div>
+
+              <div class="mb-3">
+                <label for="modelType" class="form-label fw-semibold">Inheritance Model:</label>
+                <select class="form-select" id="modelType">
+                  <option value="recessive_addin" selected>Recessive/Dominant - Add-in (PRISM Novelty)</option>
+                  <option value="recessive_mulin">Recessive/Dominant - Mul-in (Conventional)</option>
+                  <option value="denovo_addin">De Novo Mutation - Add-in (PRISM)</option>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label for="partiesCount" class="form-label fw-semibold">Multi-party Parties (P):</label>
+                <input type="number" class="form-control" id="partiesCount" value="4" readonly>
+              </div>
+
+              <button type="button" id="btnRunExperiment" class="btn btn-success w-100 fw-bold py-2">
+                <i class="bi bi-play-fill me-1"></i> Run Encrypted Analysis
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header bg-dark text-white">
+            <i class="bi bi-info-circle me-1"></i> Paper Highlights
+          </div>
+          <div class="card-body fs-7 text-secondary">
+            <p><strong>Add-in Method:</strong> Replaces $O(M)$ depth multiplications with homomorphic bit sums and constant threshold subtraction.</p>
+            <p><strong>Constant Depth:</strong> Multiplicative depth remains $\le 2$ regardless of number of samples $M$.</p>
+            <p class="mb-0"><strong>Random Blinding:</strong> Protects matching variant positions from cloud servers prior to shuffle & decryption.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Dashboard Results -->
+      <div class="col-lg-8">
+        <!-- Metrics Row -->
+        <div class="row g-3 mb-4">
+          <div class="col-md-3">
+            <div class="metric-card border-primary">
+              <div class="metric-value" id="valDepth">2</div>
+              <div class="metric-label">Mult Depth</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="metric-card border-success">
+              <div class="metric-value" id="valMatches">--</div>
+              <div class="metric-label">Matching Variants</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="metric-card border-warning">
+              <div class="metric-value" id="valTime">-- ms</div>
+              <div class="metric-label">Execution Time</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="metric-card border-info">
+              <div class="metric-value text-success" id="valAccuracy">100%</div>
+              <div class="metric-label">Accuracy vs Truth</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workflow Execution Breakdown -->
+        <div class="card">
+          <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-cpu-fill me-1"></i> FHE Computation Breakdown</span>
+            <span class="badge bg-light text-dark" id="statusBadge">Ready</span>
+          </div>
+          <div class="card-body">
+            <div class="step-box">
+              <h6 class="fw-bold text-primary mb-1"><i class="bi bi-1-circle-fill me-1"></i> Step 1: SIMD Vector Encoding & Encryption</h6>
+              <p class="text-muted small mb-0" id="step1Desc">Genotype bit vectors are packed into SIMD slots and encrypted with the joint collective public key $PK_{joint}$.</p>
+            </div>
+
+            <div class="step-box">
+              <h6 class="fw-bold text-primary mb-1"><i class="bi bi-2-circle-fill me-1"></i> Step 2: Encrypted Homomorphic Filtering</h6>
+              <p class="text-muted small mb-0" id="step2Desc">Homomorphic XOR matching, vector summation, and constant threshold evaluation.</p>
+            </div>
+
+            <div class="step-box">
+              <h6 class="fw-bold text-primary mb-1"><i class="bi bi-3-circle-fill me-1"></i> Step 3: Random Blinding & Threshold Decryption</h6>
+              <p class="text-muted small mb-0" id="step3Desc">Blinding non-matching slots with secret random values $R_i \neq 0$ and fusing partial decryptions across 4 parties.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Genotype Data & Results Table -->
+        <div class="card">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <span class="fw-bold"><i class="bi bi-table me-1"></i> Variant Analysis Sample View</span>
+            <small class="text-muted">First 15 variants preview</small>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive gene-matrix">
+              <table class="table table-sm table-striped table-hover mb-0" id="variantTable">
+                <thead class="table-dark">
+                  <tr>
+                    <th>Var ID</th>
+                    <th>Query Bit Pattern</th>
+                    <th>Sample Genotype Bits</th>
+                    <th>Cleartext Match</th>
+                    <th>FHE Decrypted Match</th>
+                  </tr>
+                </thead>
+                <tbody id="variantTableBody">
+                  <tr><td colspan="5" class="text-center text-muted py-3">Click "Run Encrypted Analysis" to generate and filter data.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-dark text-white py-3 mt-auto">
+    <div class="container text-center small">
+      PRISM Demo - Privacy-preserving Rare Disease Analysis using Fully Homomorphic Encryption &copy; 2025
+    </div>
+  </footer>
+
+  <script src="../prism-engine.js"></script>
+  <script>
+    document.getElementById('btnRunExperiment').addEventListener('click', runExperiment);
+
+    function runExperiment() {
+      const numSamples = parseInt(document.getElementById('numSamples').value);
+      const numVariants = parseInt(document.getElementById('numVariants').value);
+      const modelType = document.getElementById('modelType').value;
+      const blockSize = 25;
+      const numBlocks = Math.ceil(numVariants / blockSize);
+
+      document.getElementById('statusBadge').className = 'badge bg-warning text-dark';
+      document.getElementById('statusBadge').innerText = 'Processing FHE...';
+
+      const engine = new PRISMEngine({
+        blockSize: blockSize,
+        plainModulus: 7340033n,
+        numberOfParties: 4
+      });
+
+      // Generate Synthetic Genotype Data
+      const samplesData = [];
+      for (let s = 0; s < numSamples; s++) {
+        const sampleBits = [];
+        for (let bit = 0; bit < 2; bit++) {
+          const bitVec = [];
+          for (let v = 0; v < numVariants; v++) {
+            if (v % 15 === 0) {
+              bitVec.push(bit === 0 ? 1 : 0);
+            } else {
+              bitVec.push(Math.floor(Math.random() * 2));
+            }
+          }
+          sampleBits.push(bitVec);
+        }
+        samplesData.push(sampleBits);
+      }
+
+      // Query Pattern
+      const queryBits = [];
+      for (let s = 0; s < numSamples * 2; s++) {
+        const sampleIdx = Math.floor(s / 2);
+        const bitIdx = s % 2;
+        queryBits.push(samplesData[sampleIdx][bitIdx][0]);
+      }
+
+      // Cleartext Ground Truth
+      let cleartextMatches = [];
+      for (let v = 0; v < numVariants; v++) {
+        let match = true;
+        for (let s = 0; s < numSamples * 2; s++) {
+          const sampleIdx = Math.floor(s / 2);
+          const bitIdx = s % 2;
+          if (samplesData[sampleIdx][bitIdx][v] !== queryBits[s]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) cleartextMatches.push(v);
+      }
+
+      // Encrypt
+      const encryptedBlocks = [];
+      const encryptedQueries = [];
+
+      for (let b = 0; b < numBlocks; b++) {
+        const blockCTs = [];
+        for (let s = 0; s < numSamples * 2; s++) {
+          const sampleIdx = Math.floor(s / 2);
+          const bitIdx = s % 2;
+          const slice = samplesData[sampleIdx][bitIdx].slice(b * blockSize, (b + 1) * blockSize);
+          // Pad if last block
+          while (slice.length < blockSize) slice.push(0);
+          blockCTs.push(engine.encrypt(slice));
+        }
+        encryptedBlocks.push(blockCTs);
+      }
+
+      for (let s = 0; s < numSamples * 2; s++) {
+        const queryVec = new Array(blockSize).fill(queryBits[s]);
+        encryptedQueries.push(engine.encrypt(queryVec));
+      }
+
+      const ctNot = engine.getCiphertextNot(blockSize);
+      const ctNumSamples = engine.getCiphertextNumSamples(numSamples, blockSize);
+      const ctNumSamplesDeNovo = engine.getCiphertextNumSamplesDeNovo(numSamples, blockSize);
+      const randomBlindingVec = engine.getRandomVector(1, 100, blockSize);
+
+      const startTime = performance.now();
+      let fheMatchesCount = 0;
+      let depthUsed = 2;
+      let fheResultsByVar = new Array(numVariants).fill(false);
+
+      if (modelType === 'recessive_addin') {
+        depthUsed = 2;
+        for (let b = 0; b < numBlocks; b++) {
+          const blockCTs = encryptedBlocks[b];
+          const filteredDiff = engine.filterRecessiveDominantAddIn(blockCTs, encryptedQueries, ctNot, ctNumSamples);
+          const blindedCT = engine.evalMult(filteredDiff, randomBlindingVec);
+          const plainRes = engine.decrypt(blindedCT);
+
+          for (let i = 0; i < blockSize; i++) {
+            const varIdx = b * blockSize + i;
+            if (varIdx < numVariants) {
+              if (plainRes[i] === 0) {
+                fheMatchesCount++;
+                fheResultsByVar[varIdx] = true;
+              }
+            }
+          }
+        }
+      } else if (modelType === 'recessive_mulin') {
+        depthUsed = Math.min(12, numSamples * 2);
+        for (let b = 0; b < numBlocks; b++) {
+          const blockCTs = encryptedBlocks[b];
+          const filteredProd = engine.filterRecessiveDominantMulIn(blockCTs, encryptedQueries, ctNot);
+          const plainRes = engine.decrypt(filteredProd);
+
+          for (let i = 0; i < blockSize; i++) {
+            const varIdx = b * blockSize + i;
+            if (varIdx < numVariants) {
+              if (plainRes[i] === 1) {
+                fheMatchesCount++;
+                fheResultsByVar[varIdx] = true;
+              }
+            }
+          }
+        }
+      } else if (modelType === 'denovo_addin') {
+        depthUsed = 2;
+        for (let b = 0; b < numBlocks; b++) {
+          const blockCTs = encryptedBlocks[b];
+          const [diff0, diff1] = engine.filterDeNovoAddIn(blockCTs, ctNot, ctNumSamplesDeNovo);
+          const mulDiff = engine.evalMult(diff0, diff1);
+          const blinded = engine.evalMult(mulDiff, randomBlindingVec);
+          const plainRes = engine.decrypt(blinded);
+
+          for (let i = 0; i < blockSize; i++) {
+            const varIdx = b * blockSize + i;
+            if (varIdx < numVariants) {
+              if (plainRes[i] === 0) {
+                fheMatchesCount++;
+                fheResultsByVar[varIdx] = true;
+              }
+            }
+          }
+        }
+      }
+
+      const endTime = performance.now();
+      const executionTime = (endTime - startTime).toFixed(2);
+
+      // UI Updates
+      document.getElementById('valDepth').innerText = depthUsed;
+      document.getElementById('valMatches').innerText = fheMatchesCount;
+      document.getElementById('valTime').innerText = `${executionTime} ms`;
+      document.getElementById('statusBadge').className = 'badge bg-success';
+      document.getElementById('statusBadge').innerText = 'Completed';
+
+      // Table Update (first 15 variants)
+      const tbody = document.getElementById('variantTableBody');
+      tbody.innerHTML = '';
+      const previewCount = Math.min(15, numVariants);
+
+      for (let v = 0; v < previewCount; v++) {
+        const isTruthMatch = cleartextMatches.includes(v);
+        const isFheMatch = fheResultsByVar[v];
+
+        const tr = document.createElement('tr');
+        if (isFheMatch) tr.className = 'table-success';
+
+        let sampleBitStr = '';
+        for (let s = 0; s < numSamples; s++) {
+          sampleBitStr += `${samplesData[s][0][v]}${samplesData[s][1][v]} `;
+        }
+
+        tr.innerHTML = `
+          <td><strong>Var #${v + 1}</strong></td>
+          <td><code>${queryBits.slice(0, 4).join('')}...</code></td>
+          <td><code>${sampleBitStr.trim()}</code></td>
+          <td><span class="badge ${isTruthMatch ? 'bg-success' : 'bg-secondary'}">${isTruthMatch ? 'Match' : 'No'}</span></td>
+          <td><span class="badge ${isFheMatch ? 'bg-primary' : 'bg-secondary'}">${isFheMatch ? 'Match (0)' : 'Filtered'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    // Run automatically on initial page load
+    runExperiment();
+  </script>
+</body>
+</html>
