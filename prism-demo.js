@@ -1,6 +1,5 @@
 /**
  * PRISM CLI Demo - Verification and Benchmark Runner
- *
  * Demonstrates:
  * 1. Data generation for samples & queries
  * 2. Cleartext Ground Truth calculation
@@ -82,16 +81,12 @@ function runDemo() {
     }
   }
 
-  console.log(`------------------------------------------------------------------------`);
   console.log(`1. CLEARTEXT GROUND TRUTH ANALYSIS`);
-  console.log(`------------------------------------------------------------------------`);
   console.log(` - Expected Matching Recessive Variants Count: ${groundTruthRecessiveCount}`);
   console.log(` - Matching Variant Indices: [${groundTruthRecessiveMatches.join(', ')}]\n`);
 
   // 3. FHE Encryption of Sample & Query Data
-  console.log(`------------------------------------------------------------------------`);
   console.log(`2. FHE ENCRYPTION & SIMD PACKING`);
-  console.log(`------------------------------------------------------------------------`);
 
   // Create packed SIMD ciphertexts per block
   const encryptedBlocks = []; // [blockIdx][sampleBitIdx] -> Ciphertext
@@ -122,9 +117,7 @@ function runDemo() {
   console.log(` - Created SIMD Query Ciphertexts & Random Blinding Vectors.\n`);
 
   // 4. Recessive/Dominant Add-in Experiment
-  console.log(`------------------------------------------------------------------------`);
   console.log(`3. FHE EXPERIMENT: RECESSIVE / DOMINANT (ADD-IN vs MUL-IN)`);
-  console.log(`------------------------------------------------------------------------`);
 
   // Add-in Method
   const startAddIn = Date.now();
@@ -181,9 +174,7 @@ function runDemo() {
   console.log(` - Accuracy vs Ground Truth: ${fheMulInMatches === groundTruthRecessiveCount ? "100% MATCH SUCCESS" : "MISMATCH"}\n`);
 
   // 5. De Novo Experiment
-  console.log(`------------------------------------------------------------------------`);
   console.log(`4. FHE EXPERIMENT: DE NOVO MUTATION MODEL (ADD-IN)`);
-  console.log(`------------------------------------------------------------------------`);
 
   const ctNumSamplesDeNovo = engine.getCiphertextNumSamplesDeNovo(numberOfSamples);
   const startDeNovo = Date.now();
@@ -209,15 +200,11 @@ function runDemo() {
   console.log(` - Execution Time: ${timeDeNovo} ms\n`);
 
   // Summary Table
-  console.log(`========================================================================`);
   console.log(`                          SUMMARY COMPARISON                            `);
-  console.log(`========================================================================`);
   console.log(`Method               | Mult Depth | Time (ms) | Accuracy | Privacy`);
-  console.log(`------------------------------------------------------------------------`);
   console.log(`Add-in (PRISM)       |     ${maxAddInDepth}      |    ${timeAddIn.toString().padEnd(5)}  |  100%    | Blinding + Threshold`);
   console.log(`Mul-in (Conventional)|    ${maxMulInDepth}      |    ${timeMulIn.toString().padEnd(5)}  |  100%    | Threshold Only`);
   console.log(`De Novo (Add-in)     |     2      |    ${timeDeNovo.toString().padEnd(5)}  |  100%    | Blinding + Threshold`);
-  console.log(`========================================================================\n`);
 }
 
 runDemo();

@@ -1,6 +1,5 @@
 /**
  * PRISM (Privacy-preserving Rare Disease Analysis) - Core FHE Simulation Engine in JavaScript
- *
  * Implements:
  * 1. SIMD Vector Packing & BFV Ciphertext Operations (Add, Sub, Mult, EvalAddMany, EvalMultMany)
  * 2. Multi-party Key Management & Decryption Simulation
